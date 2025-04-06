@@ -1,10 +1,47 @@
 import React, { useState } from 'react';
-import { FaBars, FaCalendarDay, FaCheckCircle, FaClipboardList, FaExclamationCircle, FaPlus, FaSearch, FaTimesCircle, FaUser } from 'react-icons/fa';
+import { FaBars, FaCalendarDay, FaCheckCircle, FaClipboardList, FaEdit, FaExclamationCircle, FaPlus, FaSearch, FaTimesCircle, FaTrash, FaUser } from 'react-icons/fa';
 import './Dashboard.css';
 
 function Dashboard() {
 
     const [searchKey, setSearchKey] = useState('');
+    const tasks = [
+        {
+            id: 1,
+            title: 'Design Login Page',
+            description: 'Create responsive UI for login',
+            status: 'In Progress',
+            dueDate: '2024-04-02',
+            priority: 'High',
+        },
+        {
+            id: 2,
+            title: 'Setup Backend API',
+            description: 'Initialize Express and connect to MongoDB',
+            status: 'Completed',
+            dueDate: '2024-03-28',
+            priority: 'Medium',
+        },
+    ];
+
+    const filteredTasks = tasks.filter(task =>
+        task.title.toLowerCase().includes(searchKey.toLowerCase()) ||
+        task.description.toLowerCase().includes(searchKey.toLowerCase())
+    );
+
+    const getCounts = (tasks) => {
+        const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
+        const all = tasks.length;
+        const completed = tasks.filter(task => task.status.toLowerCase() === 'completed').length;
+        const incomplete = tasks.filter(task => task.status.toLowerCase() !== 'completed').length;
+        const dueToday = tasks.filter(task => task.dueDate === today).length;
+        const overdue = tasks.filter(task => task.dueDate < today && task.status.toLowerCase() !== 'completed').length;
+
+        return { all, completed, incomplete, dueToday, overdue };
+    };
+
+    const { all, completed, incomplete, dueToday, overdue } = getCounts(tasks);
 
     return (
         <div>
@@ -19,14 +56,11 @@ function Dashboard() {
                 </button>
                 <input
                     type="text"
-                    placeholder="Enter your search key"
+                    placeholder="Search by task title or description"
                     value={searchKey}
                     onChange={(e) => setSearchKey(e.target.value)}
                     className="input-field"
                 />
-                <button className="search-button">
-                    <FaSearch />
-                </button>
                 <button className="user-button">
                     <FaUser />
                 </button>
@@ -39,7 +73,7 @@ function Dashboard() {
                         <FaClipboardList />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-count">24</div>
+                        <div className="stat-count">{all}</div>
                         <div className="stat-label">All Tasks</div>
                     </div>
                 </div>
@@ -48,7 +82,7 @@ function Dashboard() {
                         <FaTimesCircle />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-count">24</div>
+                        <div className="stat-count">{incomplete}</div>
                         <div className="stat-label">Incomplete</div>
                     </div>
                 </div>
@@ -57,7 +91,7 @@ function Dashboard() {
                         <FaExclamationCircle />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-count">24</div>
+                        <div className="stat-count">{overdue}</div>
                         <div className="stat-label">Overdue</div>
                     </div>
                 </div>
@@ -66,7 +100,7 @@ function Dashboard() {
                         <FaCalendarDay />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-count">24</div>
+                        <div className="stat-count">{dueToday}</div>
                         <div className="stat-label">Due Today</div>
                     </div>
                 </div>
@@ -75,12 +109,64 @@ function Dashboard() {
                         <FaCheckCircle />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-count">24</div>
+                        <div className="stat-count">{completed}</div>
                         <div className="stat-label">Completed</div>
                     </div>
                 </div>
             </div>
 
+            {/* Task List */}
+            <div className="tasklist">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Task Title</th>
+                            <th>Task Description</th>
+                            <th>Task Status</th>
+                            <th>Due Date</th>
+                            <th>Priority</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredTasks.map((task, index) => (
+                            <tr key={task.id}>
+                                <td>{index + 1}</td>
+                                <td>
+                                    <span className="truncate" title={task.title}>
+                                        {task.title}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span className="truncate" title={task.description}>
+                                        {task.description}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span className={`badge status-${task.status.toLowerCase().replace(/\s/g, '')}`}>
+                                        {task.status}
+                                    </span>
+                                </td>
+                                <td>{task.dueDate}</td>
+                                <td>
+                                    <span className={`badge priority-${task.priority.toLowerCase()}`}>
+                                        {task.priority}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button className="icon-button">
+                                        <FaEdit />
+                                    </button>
+                                    <button className="icon-button">
+                                        <FaTrash />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
