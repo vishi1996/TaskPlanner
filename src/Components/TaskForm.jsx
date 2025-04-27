@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './TaskForm.css';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { addTask, editTask } from '../Services/TaskService';
 
 function TaskForm() {
     const location = useLocation();
@@ -9,7 +10,6 @@ function TaskForm() {
 
     const [task, setTask] = useState(
         editingTask || {
-            id: Date.now(),
             title: '',
             description: '',
             status: 'In Progress',
@@ -32,9 +32,20 @@ function TaskForm() {
         setTask((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        navigate('/dashboard', { state: { task, formMode } });
+        try {
+            if (formMode === 'Add') {
+                await addTask(task);
+            } else if (formMode === 'Edit') {
+                await editTask(task._id, task);
+            }
+
+            navigate('/dashboard', { state: { reload: true } });
+        } catch (error) {
+            console.error(error);
+            alert('Something went wrong!');
+        }
     };
 
     return (
@@ -76,7 +87,7 @@ function TaskForm() {
                     <input
                         type="date"
                         name="dueDate"
-                        value={task.dueDate}
+                        value={task.dueDate ? task.dueDate.slice(0, 10) : ''}
                         onChange={handleChange}
                     />
                 </div>

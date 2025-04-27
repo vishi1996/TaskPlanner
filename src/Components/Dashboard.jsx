@@ -2,38 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { FaBars, FaCalendarDay, FaCheckCircle, FaClipboardList, FaEdit, FaExclamationCircle, FaPlus, FaTimesCircle, FaTrash, FaUser } from 'react-icons/fa';
 import './Dashboard.css';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getTasks, deleteTask, editTask } from '../Services/TaskService'
 
 function Dashboard() {
 
     const [searchKey, setSearchKey] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const navigate = useNavigate();
     const location = useLocation();
 
-    const newTask = location.state?.task;
-    const formMode = location.state?.formMode;
-
     const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
 
-    const [tasks, setTasks] = useState([
-        {
-            id: 1,
-            title: 'Design Login Page',
-            description: 'Create responsive UI for login',
-            status: 'In Progress',
-            priority: 'High',
-            dueDate: '2024-04-02'
-        },
-        {
-            id: 2,
-            title: 'Setup Backend API',
-            description: 'Initialize Express and connect to MongoDB',
-            status: 'Completed',
-            priority: 'Medium',
-            dueDate: '2024-03-28'
-        },
-    ]);
+    const [tasks, setTasks] = useState([]);
 
     const safeLower = (text) => (text || '').toLowerCase();
 
@@ -42,30 +25,28 @@ function Dashboard() {
     const isDueToday = (task) => task.dueDate === today;
     const isOverdue = (task) => task.dueDate < today && isIncomplete(task);
 
-    useEffect(() => {
-        if (newTask && formMode === 'Add') {
-            // Add a new task
-            setTasks(prevTasks => {
-                const exists = prevTasks.some(task => task.id === newTask.id);
-                if (!exists) {
-                    return [...prevTasks, newTask];
-                }
-                return prevTasks;
-            });
-        } else if (newTask && formMode === 'Edit') {
-            // Update an existing task
-            setTasks(prevTasks =>
-                prevTasks.map(task => task.id === newTask.id ? newTask : task)
-            );
+    const fetchTasks = async () => {
+        try {
+            const data = await getTasks();
+            setTasks(data);
+        } catch (err) {
+            console.error('Error fetching tasks:', err);
+            setError('Failed to load tasks');
+        } finally {
+            setLoading(false);
         }
-    }, [newTask, formMode]);
+    };
+
+    useEffect(() => {
+        fetchTasks();
+    }, [location.state]);
 
     const filteredTasks = tasks.filter(task => {
         const matchesSearch = task.title.toLowerCase().includes(searchKey.toLowerCase()) ||
-                               task.description.toLowerCase().includes(searchKey.toLowerCase());
-    
+            task.description.toLowerCase().includes(searchKey.toLowerCase());
+
         let matchesFilter = true;
-    
+
         if (filterStatus === 'Completed') {
             matchesFilter = isCompleted(task);
         } else if (filterStatus === 'Incomplete') {
@@ -75,7 +56,7 @@ function Dashboard() {
         } else if (filterStatus === 'Overdue') {
             matchesFilter = isOverdue(task);
         }
-    
+
         return matchesSearch && matchesFilter;
     });
 
@@ -85,7 +66,7 @@ function Dashboard() {
         const incomplete = tasks.filter(isIncomplete).length;
         const dueToday = tasks.filter(isDueToday).length;
         const overdue = tasks.filter(isOverdue).length;
-    
+
         return { all, completed, incomplete, dueToday, overdue };
     };
 
@@ -99,18 +80,34 @@ function Dashboard() {
         navigate('/taskForm', { state: { formMode: 'Edit', task } });
     }
 
-    const handleDeleteTask = (taskId) => {
+    const handleDeleteTask = async (taskId) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this task?');
         if (confirmDelete) {
-            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+            try {
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
+            } catch (err) {
+                console.error('Error deleting the task:', err);
+            }
         }
     };
 
-    const handleMarkComplete = (taskId) => {
-        setTasks(prevTasks =>
-            prevTasks.map(task => task.id === taskId ? { ...task, status: 'Completed' } : task)
-        );
-    }
+    const handleMarkComplete = async (taskId) => {
+        try {
+            await editTask(taskId, { status: 'Completed' });
+            setTasks(prevTasks =>
+                prevTasks.map(task =>
+                    task._id === taskId ? { ...task, status: 'Completed' } : task
+                )
+            );
+        } catch (err) {
+            console.error('Error marking task as completed:', err);
+            alert('Failed to mark task as completed.');
+        }
+    };
+
+    if (loading) return <p>Loading tasks...</p>;
+    if (error) return <p>{error}</p>;
 
     return (
         <div>
@@ -205,7 +202,7 @@ function Dashboard() {
                     </thead>
                     <tbody>
                         {filteredTasks.map((task, index) => (
-                            <tr key={task.id}>
+                            <tr key={task._id}>
                                 <td>{index + 1}</td>
                                 <td>
                                     <span className="truncate" title={task.title}>
@@ -222,7 +219,7 @@ function Dashboard() {
                                         {task.status}
                                     </span>
                                 </td>
-                                <td>{task.dueDate}</td>
+                                <td>{task.dueDate ? task.dueDate.slice(0, 10) : ''}</td>
                                 <td>
                                     <span className={`badge priority-${task.priority.toLowerCase()}`}>
                                         {task.priority}
@@ -232,11 +229,11 @@ function Dashboard() {
                                     <button className="icon-button" onClick={() => handleEditTask(task)}>
                                         <FaEdit />
                                     </button>
-                                    <button className="icon-button" onClick={() => handleDeleteTask(task.id)}>
+                                    <button className="icon-button" onClick={() => handleDeleteTask(task._id)}>
                                         <FaTrash />
                                     </button>
                                     {task.status !== 'Completed' && (
-                                        <button className="icon-button" onClick={() => handleMarkComplete(task.id)}>
+                                        <button className="icon-button" onClick={() => handleMarkComplete(task._id)}>
                                             <FaCheckCircle />
                                         </button>
                                     )}
