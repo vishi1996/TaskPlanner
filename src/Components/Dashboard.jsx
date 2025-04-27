@@ -9,6 +9,7 @@ function Dashboard() {
     const navigate = useNavigate();
     const location = useLocation();
     const newTask = location.state?.task;
+    const formMode = location.state?.formMode;
 
     const [tasks, setTasks] = useState([
         {
@@ -30,7 +31,8 @@ function Dashboard() {
     ]);
 
     useEffect(() => {
-        if (newTask) {
+        if (newTask && formMode === 'Add') {
+            // Add a new task
             setTasks(prevTasks => {
                 const exists = prevTasks.some(task => task.id === newTask.id);
                 if (!exists) {
@@ -38,8 +40,13 @@ function Dashboard() {
                 }
                 return prevTasks;
             });
+        } else if (newTask && formMode === 'Edit') {
+            // Update an existing task
+            setTasks(prevTasks =>
+                prevTasks.map(task => task.id === newTask.id ? newTask : task)
+            );
         }
-    }, [newTask]);
+    }, [newTask, formMode]);
 
     const filteredTasks = tasks.filter(task =>
         task.title.toLowerCase().includes(searchKey.toLowerCase()) ||
@@ -61,8 +68,19 @@ function Dashboard() {
     const { all, completed, incomplete, dueToday, overdue } = getCounts(tasks);
 
     const handleAddNewTask = () => {
-        navigate('/taskForm')
+        navigate('/taskForm', { state: { formMode: 'Add' } });
     }
+
+    const handleEditTask = (task) => {
+        navigate('/taskForm', { state: { formMode: 'Edit', task } });
+    }
+
+    const handleDeleteTask = (taskId) => {
+        const confirmDelete = window.confirm('Are you sure you want to delete this task?');
+        if (confirmDelete) {
+            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+        }
+    };
 
     return (
         <div>
@@ -176,10 +194,10 @@ function Dashboard() {
                                     </span>
                                 </td>
                                 <td>
-                                    <button className="icon-button">
+                                    <button className="icon-button" onClick={() => handleEditTask(task)}>
                                         <FaEdit />
                                     </button>
-                                    <button className="icon-button">
+                                    <button className="icon-button" onClick={() => handleDeleteTask(task.id)}>
                                         <FaTrash />
                                     </button>
                                 </td>
