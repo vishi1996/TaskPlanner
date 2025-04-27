@@ -6,10 +6,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 function Dashboard() {
 
     const [searchKey, setSearchKey] = useState('');
+    const [filterStatus, setFilterStatus] = useState('All');
+
     const navigate = useNavigate();
     const location = useLocation();
+
     const newTask = location.state?.task;
     const formMode = location.state?.formMode;
+
+    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
 
     const [tasks, setTasks] = useState([
         {
@@ -30,6 +35,13 @@ function Dashboard() {
         },
     ]);
 
+    const safeLower = (text) => (text || '').toLowerCase();
+
+    const isCompleted = (task) => safeLower(task.status) === 'completed';
+    const isIncomplete = (task) => safeLower(task.status) !== 'completed';
+    const isDueToday = (task) => task.dueDate === today;
+    const isOverdue = (task) => task.dueDate < today && isIncomplete(task);
+
     useEffect(() => {
         if (newTask && formMode === 'Add') {
             // Add a new task
@@ -48,20 +60,32 @@ function Dashboard() {
         }
     }, [newTask, formMode]);
 
-    const filteredTasks = tasks.filter(task =>
-        task.title.toLowerCase().includes(searchKey.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchKey.toLowerCase())
-    );
+    const filteredTasks = tasks.filter(task => {
+        const matchesSearch = task.title.toLowerCase().includes(searchKey.toLowerCase()) ||
+                               task.description.toLowerCase().includes(searchKey.toLowerCase());
+    
+        let matchesFilter = true;
+    
+        if (filterStatus === 'Completed') {
+            matchesFilter = isCompleted(task);
+        } else if (filterStatus === 'Incomplete') {
+            matchesFilter = isIncomplete(task);
+        } else if (filterStatus === 'Due Today') {
+            matchesFilter = isDueToday(task);
+        } else if (filterStatus === 'Overdue') {
+            matchesFilter = isOverdue(task);
+        }
+    
+        return matchesSearch && matchesFilter;
+    });
 
     const getCounts = (tasks) => {
-        const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-
         const all = tasks.length;
-        const completed = tasks.filter(task => task.status.toLowerCase() === 'completed').length;
-        const incomplete = tasks.filter(task => task.status.toLowerCase() !== 'completed').length;
-        const dueToday = tasks.filter(task => task.dueDate === today).length;
-        const overdue = tasks.filter(task => task.dueDate < today && task.status.toLowerCase() !== 'completed').length;
-
+        const completed = tasks.filter(isCompleted).length;
+        const incomplete = tasks.filter(isIncomplete).length;
+        const dueToday = tasks.filter(isDueToday).length;
+        const overdue = tasks.filter(isOverdue).length;
+    
         return { all, completed, incomplete, dueToday, overdue };
     };
 
@@ -81,6 +105,12 @@ function Dashboard() {
             setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
         }
     };
+
+    const handleMarkComplete = (taskId) => {
+        setTasks(prevTasks =>
+            prevTasks.map(task => task.id === taskId ? { ...task, status: 'Completed' } : task)
+        );
+    }
 
     return (
         <div>
@@ -107,7 +137,8 @@ function Dashboard() {
 
             {/* Stats bar */}
             <div className="stats-bar">
-                <div className="stat-card" style={{ backgroundColor: '#007bff' }}>
+                <div className="stat-card" style={{ backgroundColor: '#007bff', cursor: 'pointer' }}
+                    onClick={() => setFilterStatus('All')}>
                     <div className="icon-circle">
                         <FaClipboardList />
                     </div>
@@ -116,7 +147,8 @@ function Dashboard() {
                         <div className="stat-label">All Tasks</div>
                     </div>
                 </div>
-                <div className="stat-card" style={{ backgroundColor: '#ffc107' }}>
+                <div className="stat-card" style={{ backgroundColor: '#ffc107', cursor: 'pointer' }}
+                    onClick={() => setFilterStatus('Incomplete')}>
                     <div className="icon-circle">
                         <FaTimesCircle />
                     </div>
@@ -125,7 +157,8 @@ function Dashboard() {
                         <div className="stat-label">Incomplete</div>
                     </div>
                 </div>
-                <div className="stat-card" style={{ backgroundColor: '#dc3545' }}>
+                <div className="stat-card" style={{ backgroundColor: '#dc3545', cursor: 'pointer' }}
+                    onClick={() => setFilterStatus('Overdue')}>
                     <div className="icon-circle">
                         <FaExclamationCircle />
                     </div>
@@ -134,7 +167,8 @@ function Dashboard() {
                         <div className="stat-label">Overdue</div>
                     </div>
                 </div>
-                <div className="stat-card" style={{ backgroundColor: '#17a2b8' }}>
+                <div className="stat-card" style={{ backgroundColor: '#17a2b8', cursor: 'pointer' }}
+                    onClick={() => setFilterStatus('Due Today')}>
                     <div className="icon-circle">
                         <FaCalendarDay />
                     </div>
@@ -143,7 +177,8 @@ function Dashboard() {
                         <div className="stat-label">Due Today</div>
                     </div>
                 </div>
-                <div className="stat-card" style={{ backgroundColor: '#28a745' }}>
+                <div className="stat-card" style={{ backgroundColor: '#28a745', cursor: 'pointer' }}
+                    onClick={() => setFilterStatus('Completed')}>
                     <div className="icon-circle">
                         <FaCheckCircle />
                     </div>
@@ -200,6 +235,11 @@ function Dashboard() {
                                     <button className="icon-button" onClick={() => handleDeleteTask(task.id)}>
                                         <FaTrash />
                                     </button>
+                                    {task.status !== 'Completed' && (
+                                        <button className="icon-button" onClick={() => handleMarkComplete(task.id)}>
+                                            <FaCheckCircle />
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
