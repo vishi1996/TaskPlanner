@@ -1,28 +1,45 @@
-import React, { useState } from 'react';
-import { FaBars, FaCalendarDay, FaCheckCircle, FaClipboardList, FaEdit, FaExclamationCircle, FaPlus, FaSearch, FaTimesCircle, FaTrash, FaUser } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+import { FaBars, FaCalendarDay, FaCheckCircle, FaClipboardList, FaEdit, FaExclamationCircle, FaPlus, FaTimesCircle, FaTrash, FaUser } from 'react-icons/fa';
 import './Dashboard.css';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 function Dashboard() {
 
     const [searchKey, setSearchKey] = useState('');
-    const tasks = [
+    const navigate = useNavigate();
+    const location = useLocation();
+    const newTask = location.state?.task;
+
+    const [tasks, setTasks] = useState([
         {
             id: 1,
             title: 'Design Login Page',
             description: 'Create responsive UI for login',
             status: 'In Progress',
-            dueDate: '2024-04-02',
             priority: 'High',
+            dueDate: '2024-04-02'
         },
         {
             id: 2,
             title: 'Setup Backend API',
             description: 'Initialize Express and connect to MongoDB',
             status: 'Completed',
-            dueDate: '2024-03-28',
             priority: 'Medium',
+            dueDate: '2024-03-28'
         },
-    ];
+    ]);
+
+    useEffect(() => {
+        if (newTask) {
+            setTasks(prevTasks => {
+                const exists = prevTasks.some(task => task.id === newTask.id);
+                if (!exists) {
+                    return [...prevTasks, newTask];
+                }
+                return prevTasks;
+            });
+        }
+    }, [newTask]);
 
     const filteredTasks = tasks.filter(task =>
         task.title.toLowerCase().includes(searchKey.toLowerCase()) ||
@@ -43,6 +60,10 @@ function Dashboard() {
 
     const { all, completed, incomplete, dueToday, overdue } = getCounts(tasks);
 
+    const handleAddNewTask = () => {
+        navigate('/taskForm')
+    }
+
     return (
         <div>
             {/* Tool bar */}
@@ -50,7 +71,7 @@ function Dashboard() {
                 <button className="hamburger-button">
                     <FaBars />
                 </button>
-                <button className="create-task-button">
+                <button className="create-task-button" onClick={handleAddNewTask}>
                     <FaPlus style={{ marginRight: '8px' }} />
                     New Task
                 </button>
