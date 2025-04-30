@@ -106,6 +106,10 @@ function Dashboard() {
         }
     };
 
+    const handleViewTask = (task) => {
+        navigate('/taskDetail', { state: { task } });
+    };
+
     if (loading) return <p>Loading tasks...</p>;
     if (error) return <p>{error}</p>;
 
@@ -237,6 +241,9 @@ function Dashboard() {
                                             <FaCheckCircle />
                                         </button>
                                     )}
+                                    <button className="icon-button" onClick={() => handleViewTask(task)}>
+                                        <FaClipboardList />
+                                    </button>
                                 </td>
                             </tr>
                         ))}

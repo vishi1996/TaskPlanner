@@ -4,6 +4,7 @@ import Login from './Auth/Login';
 import SignUp from './Auth/SignUp';
 import Dashboard from './Components/Dashboard';
 import TaskForm from './Components/TaskForm';
+import TaskDetail from './Components/TaskDetail';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Route path="/signup" element={<SignUp />} />
       <Route path='/dashboard' element={<Dashboard />} />
       <Route path='/taskForm' element={<TaskForm />} />
+      <Route path="/taskDetail" element={<TaskDetail />} />
     </Routes>
   );
 }
